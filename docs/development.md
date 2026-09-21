@@ -10,8 +10,12 @@ On Ubuntu 22.04 or 24.04, install the Tauri desktop dependencies:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev patchelf
 ```
+
+Ubuntu 24.04 commonly uses Ayatana AppIndicator. PDF Pair does not enable Tauri's
+tray feature, so the legacy `libappindicator3-dev` package is not required and
+may conflict with an installed Ayatana runtime.
 
 Windows development requires the Microsoft C++ Build Tools and WebView2 runtime.
 

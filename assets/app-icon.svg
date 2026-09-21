@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="PDF Pair">
+  <rect width="1024" height="1024" rx="220" fill="#172033"/>
+  <rect x="132" y="188" width="316" height="648" rx="48" fill="#f8fafc"/>
+  <rect x="576" y="188" width="316" height="648" rx="48" fill="#f8fafc"/>
+  <path d="M210 326h160M210 418h160M210 510h124" stroke="#8d9bb1" stroke-width="34" stroke-linecap="round"/>
+  <path d="M654 326h160M654 418h160M654 510h124" stroke="#8d9bb1" stroke-width="34" stroke-linecap="round"/>
+  <path d="M430 624h164" stroke="#7de2c1" stroke-width="54" stroke-linecap="round"/>
+  <circle cx="430" cy="624" r="68" fill="none" stroke="#7de2c1" stroke-width="42"/>
+  <circle cx="594" cy="624" r="68" fill="none" stroke="#7de2c1" stroke-width="42"/>
+</svg>
