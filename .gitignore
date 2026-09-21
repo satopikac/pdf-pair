@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.vite/
+src-tauri/target/
+src-tauri/gen/
+*.tsbuildinfo
+.DS_Store
+
+# Local IDE and environment files
+.idea/
+.vscode/
+*.local
