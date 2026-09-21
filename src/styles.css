@@ -123,7 +123,7 @@ label:has(input:focus-visible),
   box-shadow: 0 0 0 3px rgb(97 213 173 / 12%);
 }
 
-.bind-button, .secondary-button, .compact-button, .tool-button, .text-tool-button {
+.bind-button, .anchor-button, .clear-anchor-button, .secondary-button, .compact-button, .tool-button, .text-tool-button {
   border: 1px solid transparent;
   transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
@@ -160,6 +160,39 @@ label:has(input:focus-visible),
 }
 
 .bind-button--active:hover { background: #6768e8; }
+
+.anchor-button {
+  height: 36px;
+  padding: 0 11px;
+  color: #cbd2e0;
+  background: transparent;
+  border-color: rgb(255 255 255 / 12%);
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.anchor-button:hover:not(:disabled), .anchor-button--active {
+  color: #fff;
+  background: rgb(91 92 226 / 28%);
+  border-color: rgb(129 130 241 / 48%);
+}
+
+.anchor-button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.clear-anchor-button {
+  width: 25px;
+  height: 25px;
+  margin-left: -5px;
+  padding: 0;
+  color: #abb5c8;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  font-size: 17px;
+}
+
+.clear-anchor-button:hover { color: #fff; background: rgb(255 255 255 / 10%); }
 
 .workspace {
   min-height: 0;
@@ -215,6 +248,7 @@ label:has(input:focus-visible),
 .workspace[data-bound="true"] .workspace-divider span { color: var(--accent); background: var(--accent-soft); border-color: rgb(91 92 226 / 35%); }
 
 .document-panel {
+  position: relative;
   min-width: 0;
   min-height: 500px;
   overflow: hidden;
@@ -532,6 +566,57 @@ label:has(input:focus-visible),
 
 .page-error { position: absolute; inset: 0; display: grid; place-items: center; color: #a23948; background: #fff1f2; }
 
+.password-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(20 25 43 / 54%);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+}
+
+.password-dialog {
+  width: min(330px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 25px;
+  background: #fff;
+  border: 1px solid rgb(255 255 255 / 60%);
+  border-radius: 15px;
+  box-shadow: 0 24px 70px rgb(15 20 35 / 30%);
+  text-align: center;
+}
+
+.password-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  border-radius: 12px;
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.password-dialog h2 { margin: 14px 0 5px; font-size: 17px; }
+.password-dialog p { margin: 0 0 15px; color: var(--muted); font-size: 12px; }
+.password-dialog input {
+  width: 100%;
+  height: 38px;
+  padding: 0 11px;
+  color: var(--ink);
+  background: #f7f8fb;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.password-actions { width: 100%; display: flex; justify-content: flex-end; gap: 7px; margin-top: 14px; }
+.password-actions .secondary-button { box-shadow: none; }
+.password-actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+
 .status-bar {
   min-height: 31px;
   display: flex;
@@ -584,7 +669,7 @@ label:has(input:focus-visible),
   .app-toolbar { padding: 10px 12px; }
   .brand-mark { width: 36px; height: 36px; border-radius: 11px; }
   .brand-mark svg { width: 23px; height: 23px; }
-  .eyebrow, .privacy-pill, .status-hint { display: none; }
+  .eyebrow, .privacy-pill, .status-hint, .anchor-button, .clear-anchor-button { display: none; }
   .workspace { padding: 9px; }
   .panel-actions { flex-wrap: wrap; }
   .fit-controls, .fit-controls + .toolbar-separator { display: none; }

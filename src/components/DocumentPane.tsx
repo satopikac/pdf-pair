@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent, DragEvent, FormEvent, UIEvent } from "react";
+import type { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, UIEvent } from "react";
 import type { PdfDocument, PdfLoader } from "../pdf/pdfLoader";
 import type { PdfFileGateway } from "../platform/pdfFileGateway";
 import type { PaneSession } from "../session/sessionStore";
@@ -15,6 +15,7 @@ export interface DocumentPaneProps {
   fileGateway?: PdfFileGateway;
   initialSession?: PaneSession;
   onStateChange?: (side: PaneSide, changes: Partial<PaneSession>) => void;
+  onAvailabilityChange?: (side: PaneSide, available: boolean) => void;
   onScrollContainer?: (side: PaneSide, element: HTMLDivElement | null) => void;
   onScroll?: (side: PaneSide, element: HTMLDivElement) => void;
   onInteraction?: (side: PaneSide) => void;
@@ -24,6 +25,11 @@ interface LoadedDocument {
   fileName: string;
   filePath: string | null;
   document: PdfDocument;
+}
+
+interface PasswordPrompt {
+  incorrect: boolean;
+  resolve: (password: string | null) => void;
 }
 
 const MIN_SCALE = 0.5;
@@ -46,6 +52,7 @@ export function DocumentPane({
   fileGateway,
   initialSession,
   onStateChange,
+  onAvailabilityChange,
   onScrollContainer,
   onScroll,
   onInteraction,
@@ -63,6 +70,9 @@ export function DocumentPane({
   const [searchResults, setSearchResults] = useState<PdfSearchResult[]>([]);
   const [searchIndex, setSearchIndex] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  const [passwordPrompt, setPasswordPrompt] = useState<PasswordPrompt | null>(null);
+  const [passwordDraft, setPasswordDraft] = useState("");
+  const passwordCancelledRef = useRef(false);
   const documentRef = useRef<PdfDocument | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const restoredPathRef = useRef(false);
@@ -72,6 +82,10 @@ export function DocumentPane({
       void documentRef.current?.destroy();
     };
   }, []);
+
+  useEffect(() => {
+    onAvailabilityChange?.(side, Boolean(loaded));
+  }, [loaded, onAvailabilityChange, side]);
 
   useEffect(() => {
     const path = initialSession?.filePath;
@@ -96,7 +110,15 @@ export function DocumentPane({
     setError(null);
 
     try {
-      const nextDocument = await loader.load(file);
+      passwordCancelledRef.current = false;
+      const requestPassword = (incorrect: boolean) =>
+        new Promise<string | null>((resolve) => {
+          setPasswordDraft("");
+          setPasswordPrompt({ incorrect, resolve });
+        });
+      const nextDocument = fileGateway?.isAvailable || loader.supportsPassword
+        ? await loader.load(file, requestPassword)
+        : await loader.load(file);
       const previousDocument = documentRef.current;
 
       documentRef.current = nextDocument;
@@ -114,7 +136,11 @@ export function DocumentPane({
       });
       void previousDocument?.destroy();
     } catch {
-      setError("无法打开这个 PDF，请检查文件是否有效。");
+      setError(
+        passwordCancelledRef.current
+          ? "已取消输入 PDF 密码。"
+          : "无法打开这个 PDF，请检查文件是否有效或密码是否正确。",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -189,6 +215,33 @@ export function DocumentPane({
     onScroll?.(side, container);
   }
 
+  function handleReaderKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.target instanceof HTMLInputElement) {
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+      event.preventDefault();
+      setIsSearchOpen(true);
+      return;
+    }
+    if (event.key === "PageDown" || event.key === "ArrowDown") {
+      event.preventDefault();
+      goToPage(currentPage + 1);
+    } else if (event.key === "PageUp" || event.key === "ArrowUp") {
+      event.preventDefault();
+      goToPage(currentPage - 1);
+    } else if (event.key === "+" || event.key === "=") {
+      event.preventDefault();
+      updateScale(changeScale(scale, SCALE_STEP));
+    } else if (event.key === "-") {
+      event.preventDefault();
+      updateScale(changeScale(scale, -SCALE_STEP));
+    } else if (event.key === "0") {
+      event.preventDefault();
+      updateScale(1);
+    }
+  }
+
   function updateScale(nextScale: number) {
     setScale(nextScale);
     onStateChange?.(side, { scale: nextScale });
@@ -256,6 +309,26 @@ export function DocumentPane({
     const nextIndex = (searchIndex + delta + searchResults.length) % searchResults.length;
     setSearchIndex(nextIndex);
     goToPage(searchResults[nextIndex]!.pageNumber);
+  }
+
+  function submitPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!passwordPrompt || !passwordDraft) {
+      return;
+    }
+    const { resolve } = passwordPrompt;
+    setPasswordPrompt(null);
+    resolve(passwordDraft);
+  }
+
+  function cancelPassword() {
+    if (!passwordPrompt) {
+      return;
+    }
+    passwordCancelledRef.current = true;
+    const { resolve } = passwordPrompt;
+    setPasswordPrompt(null);
+    resolve(null);
   }
 
   const fileInput = (accessibleLabel: string) => (
@@ -460,7 +533,10 @@ export function DocumentPane({
           tabIndex={0}
           onPointerDown={() => onInteraction?.(side)}
           onWheel={() => onInteraction?.(side)}
-          onKeyDown={() => onInteraction?.(side)}
+          onKeyDown={(event) => {
+            onInteraction?.(side);
+            handleReaderKeyDown(event);
+          }}
           onScroll={handleScroll}
         >
           <PdfDocumentView
@@ -484,6 +560,26 @@ export function DocumentPane({
           {fileControl("选择 PDF", "secondary-button", `选择${label} PDF 文件`)}
         </div>
       )}
+      {passwordPrompt ? (
+        <div className="password-overlay" role="dialog" aria-modal="true" aria-label="PDF 密码">
+          <form className="password-dialog" onSubmit={submitPassword}>
+            <div className="password-icon" aria-hidden="true">⌁</div>
+            <h2>{passwordPrompt.incorrect ? "密码不正确" : "PDF 已加密"}</h2>
+            <p>{passwordPrompt.incorrect ? "请重新输入文档密码。" : "输入密码以打开此文档。"}</p>
+            <input
+              type="password"
+              value={passwordDraft}
+              aria-label="PDF 密码"
+              autoFocus
+              onChange={(event) => setPasswordDraft(event.target.value)}
+            />
+            <div className="password-actions">
+              <button type="button" className="compact-button" onClick={cancelPassword}>取消</button>
+              <button type="submit" className="secondary-button" disabled={!passwordDraft}>打开</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </section>
   );
 }

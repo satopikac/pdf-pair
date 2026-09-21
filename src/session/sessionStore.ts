@@ -10,6 +10,11 @@ export interface RecentPair {
   openedAt: string;
 }
 
+export interface ScrollAnchor {
+  leftProgress: number;
+  rightProgress: number;
+}
+
 export interface SessionSnapshot {
   version: 1;
   isScrollBound: boolean;
@@ -19,6 +24,7 @@ export interface SessionSnapshot {
     right: PaneSession;
   };
   recentPairs: RecentPair[];
+  scrollAnchor?: ScrollAnchor | null;
 }
 
 export interface SessionStore {
@@ -75,7 +81,22 @@ function isSessionSnapshot(value: unknown): value is SessionSnapshot {
     isPaneSession(value.panes.left) &&
     isPaneSession(value.panes.right) &&
     Array.isArray(value.recentPairs) &&
-    value.recentPairs.every(isRecentPair)
+    value.recentPairs.every(isRecentPair) &&
+    (value.scrollAnchor === undefined ||
+      value.scrollAnchor === null ||
+      isScrollAnchor(value.scrollAnchor))
+  );
+}
+
+function isScrollAnchor(value: unknown): value is ScrollAnchor {
+  return (
+    isRecord(value) &&
+    isFiniteNumber(value.leftProgress) &&
+    value.leftProgress >= 0 &&
+    value.leftProgress <= 1 &&
+    isFiniteNumber(value.rightProgress) &&
+    value.rightProgress >= 0 &&
+    value.rightProgress <= 1
   );
 }
 
