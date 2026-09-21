@@ -4,6 +4,10 @@ import { DocumentPane, type PaneSide } from "./components/DocumentPane";
 import { mapScrollProgress } from "./domain/sync";
 import { pdfLoader, type PdfLoader } from "./pdf/pdfLoader";
 import {
+  tauriPdfFileGateway,
+  type PdfFileGateway,
+} from "./platform/pdfFileGateway";
+import {
   createSessionStore,
   type SessionSnapshot,
   type SessionStore,
@@ -13,6 +17,7 @@ import "./styles.css";
 export interface AppProps {
   loader?: PdfLoader;
   sessionStore?: SessionStore;
+  fileGateway?: PdfFileGateway;
 }
 
 function createEmptySession(): SessionSnapshot {
@@ -39,7 +44,11 @@ function createDefaultStore(): SessionStore {
   return createSessionStore(window.localStorage);
 }
 
-export function App({ loader = pdfLoader, sessionStore }: AppProps) {
+export function App({
+  loader = pdfLoader,
+  sessionStore,
+  fileGateway = tauriPdfFileGateway,
+}: AppProps) {
   const storeRef = useRef(sessionStore ?? createDefaultStore());
   const [initialSession] = useState(
     () => storeRef.current.load() ?? createEmptySession(),
@@ -64,6 +73,35 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
     activeSideRef.current = side;
     setActiveSide(side);
   }, []);
+
+  const updatePaneState = useCallback(
+    (side: PaneSide, changes: Partial<SessionSnapshot["panes"][PaneSide]>) => {
+      const panes = {
+        ...sessionRef.current.panes,
+        [side]: { ...sessionRef.current.panes[side], ...changes },
+      };
+      let recentPairs = sessionRef.current.recentPairs;
+
+      if (changes.filePath && panes.left.filePath && panes.right.filePath) {
+        recentPairs = [
+          {
+            leftPath: panes.left.filePath,
+            rightPath: panes.right.filePath,
+            openedAt: new Date().toISOString(),
+          },
+          ...recentPairs.filter(
+            (pair) =>
+              pair.leftPath !== panes.left.filePath || pair.rightPath !== panes.right.filePath,
+          ),
+        ].slice(0, 5);
+      }
+
+      const nextSession = { ...sessionRef.current, panes, recentPairs };
+      sessionRef.current = nextSession;
+      storeRef.current.save(nextSession);
+    },
+    [],
+  );
 
   const synchronizeFrom = useCallback((sourceSide: PaneSide) => {
     const targetSide: PaneSide = sourceSide === "left" ? "right" : "left";
@@ -198,6 +236,9 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
           side="left"
           loader={loader}
           isActive={activeSide === "left"}
+          fileGateway={fileGateway}
+          initialSession={initialSession.panes.left}
+          onStateChange={updatePaneState}
           onScrollContainer={registerPane}
           onScroll={handleScroll}
           onInteraction={markActive}
@@ -226,6 +267,9 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
           side="right"
           loader={loader}
           isActive={activeSide === "right"}
+          fileGateway={fileGateway}
+          initialSession={initialSession.panes.right}
+          onStateChange={updatePaneState}
           onScrollContainer={registerPane}
           onScroll={handleScroll}
           onInteraction={markActive}

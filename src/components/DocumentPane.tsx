@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent, FormEvent, UIEvent } from "react";
 import type { PdfDocument, PdfLoader } from "../pdf/pdfLoader";
+import type { PdfFileGateway } from "../platform/pdfFileGateway";
+import type { PaneSession } from "../session/sessionStore";
 import { PdfDocumentView } from "./PdfDocumentView";
 
 export type PaneSide = "left" | "right";
@@ -9,6 +11,9 @@ export interface DocumentPaneProps {
   side: PaneSide;
   loader: PdfLoader;
   isActive?: boolean;
+  fileGateway?: PdfFileGateway;
+  initialSession?: PaneSession;
+  onStateChange?: (side: PaneSide, changes: Partial<PaneSession>) => void;
   onScrollContainer?: (side: PaneSide, element: HTMLDivElement | null) => void;
   onScroll?: (side: PaneSide, element: HTMLDivElement) => void;
   onInteraction?: (side: PaneSide) => void;
@@ -16,6 +21,7 @@ export interface DocumentPaneProps {
 
 interface LoadedDocument {
   fileName: string;
+  filePath: string | null;
   document: PdfDocument;
 }
 
@@ -36,6 +42,9 @@ export function DocumentPane({
   side,
   loader,
   isActive = false,
+  fileGateway,
+  initialSession,
+  onStateChange,
   onScrollContainer,
   onScroll,
   onInteraction,
@@ -44,11 +53,12 @@ export function DocumentPane({
   const [loaded, setLoaded] = useState<LoadedDocument | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(initialSession?.scale ?? 1);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageDraft, setPageDraft] = useState("1");
   const documentRef = useRef<PdfDocument | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const restoredPathRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -56,7 +66,25 @@ export function DocumentPane({
     };
   }, []);
 
-  async function openFile(file: File) {
+  useEffect(() => {
+    const path = initialSession?.filePath;
+    if (!path || !fileGateway?.isAvailable || restoredPathRef.current) {
+      return;
+    }
+
+    restoredPathRef.current = true;
+    setIsLoading(true);
+    void fileGateway
+      .reopenPdf(path)
+      .then(({ file, path: reopenedPath }) => openFile(file, reopenedPath, true))
+      .catch(() => {
+        setError("上次打开的 PDF 已移动、删除或无法读取。");
+        setIsLoading(false);
+        onStateChange?.(side, { filePath: null });
+      });
+  }, [fileGateway, initialSession?.filePath, onStateChange, side]);
+
+  async function openFile(file: File, filePath: string | null = null, restore = false) {
     setIsLoading(true);
     setError(null);
 
@@ -65,10 +93,16 @@ export function DocumentPane({
       const previousDocument = documentRef.current;
 
       documentRef.current = nextDocument;
-      setLoaded({ fileName: file.name, document: nextDocument });
-      setScale(1);
+      const nextScale = restore ? (initialSession?.scale ?? 1) : 1;
+      setLoaded({ fileName: file.name, filePath, document: nextDocument });
+      setScale(nextScale);
       setCurrentPage(1);
       setPageDraft("1");
+      onStateChange?.(side, {
+        filePath,
+        scale: nextScale,
+        scrollProgress: restore ? (initialSession?.scrollProgress ?? 0) : 0,
+      });
       void previousDocument?.destroy();
     } catch {
       setError("无法打开这个 PDF，请检查文件是否有效。");
@@ -139,7 +173,16 @@ export function DocumentPane({
       setCurrentPage(visiblePage);
       setPageDraft(String(visiblePage));
     }
+    const maxScrollTop = container.scrollHeight - container.clientHeight;
+    onStateChange?.(side, {
+      scrollProgress: maxScrollTop > 0 ? container.scrollTop / maxScrollTop : 0,
+    });
     onScroll?.(side, container);
+  }
+
+  function updateScale(nextScale: number) {
+    setScale(nextScale);
+    onStateChange?.(side, { scale: nextScale });
   }
 
   async function fitDocument(mode: "width" | "page") {
@@ -157,7 +200,21 @@ export function DocumentPane({
 
     if (Number.isFinite(requestedScale) && requestedScale > 0) {
       const clampedScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, requestedScale));
-      setScale(Math.round(clampedScale * 100) / 100);
+      updateScale(Math.round(clampedScale * 100) / 100);
+    }
+  }
+
+  async function pickNativePdf() {
+    if (!fileGateway?.isAvailable) {
+      return;
+    }
+    try {
+      const selected = await fileGateway.pickPdf();
+      if (selected) {
+        await openFile(selected.file, selected.path);
+      }
+    } catch {
+      setError("无法读取所选 PDF，请检查文件权限。");
     }
   }
 
@@ -170,6 +227,18 @@ export function DocumentPane({
       onChange={handleFileChange}
     />
   );
+
+  const fileControl = (text: string, className: string, accessibleLabel: string) =>
+    fileGateway?.isAvailable ? (
+      <button type="button" className={className} onClick={() => void pickNativePdf()}>
+        {text}
+      </button>
+    ) : (
+      <label className={className}>
+        {text}
+        {fileInput(accessibleLabel)}
+      </label>
+    );
 
   return (
     <section
@@ -251,7 +320,7 @@ export function DocumentPane({
               className="tool-button"
               aria-label={`缩小${label} PDF`}
               disabled={scale <= MIN_SCALE}
-              onClick={() => setScale((current) => changeScale(current, -SCALE_STEP))}
+              onClick={() => updateScale(changeScale(scale, -SCALE_STEP))}
             >
               −
             </button>
@@ -263,14 +332,11 @@ export function DocumentPane({
               className="tool-button"
               aria-label={`放大${label} PDF`}
               disabled={scale >= MAX_SCALE}
-              onClick={() => setScale((current) => changeScale(current, SCALE_STEP))}
+              onClick={() => updateScale(changeScale(scale, SCALE_STEP))}
             >
               +
             </button>
-            <label className="compact-button">
-              替换
-              {fileInput(`选择${label} PDF 文件`)}
-            </label>
+            {fileControl("替换", "compact-button", `选择${label} PDF 文件`)}
           </div>
         ) : null}
       </header>
@@ -279,16 +345,23 @@ export function DocumentPane({
         <div className="document-message" role="alert">
           <strong>PDF 加载失败</strong>
           <span>{error}</span>
-          <label className="secondary-button">
-            重新选择 PDF
-            {fileInput(`重新选择${label} PDF 文件`)}
-          </label>
+          {fileControl(
+            "重新选择 PDF",
+            "secondary-button",
+            `重新选择${label} PDF 文件`,
+          )}
         </div>
       ) : loaded ? (
         <div
           ref={(element) => {
             scrollContainerRef.current = element;
             onScrollContainer?.(side, element);
+            if (element && initialSession?.scrollProgress) {
+              requestAnimationFrame(() => {
+                const maxScrollTop = element.scrollHeight - element.clientHeight;
+                element.scrollTop = initialSession.scrollProgress * Math.max(0, maxScrollTop);
+              });
+            }
           }}
           className="document-scroll"
           role="region"
@@ -312,10 +385,7 @@ export function DocumentPane({
           </div>
           <h2>打开一个 PDF</h2>
           <p>将文件拖放到此处，或浏览本地文件</p>
-          <label className="secondary-button">
-            选择 PDF
-            {fileInput(`选择${label} PDF 文件`)}
-          </label>
+          {fileControl("选择 PDF", "secondary-button", `选择${label} PDF 文件`)}
         </div>
       )}
     </section>

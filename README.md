@@ -5,6 +5,7 @@ PDF Pair is an offline-first, open-source PDF comparison reader for Windows and 
 ## Current capabilities
 
 - Open independent local PDFs in two reader panes
+- Reopen native PDF paths and restore pane reading state
 - Lazily render visible pages with PDF.js
 - Bind scrolling by normalized document progress
 - Let either pane become the active scroll driver

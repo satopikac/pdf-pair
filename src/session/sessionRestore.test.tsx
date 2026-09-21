@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../App";
+import type { PdfDocument, PdfLoader } from "../pdf/pdfLoader";
+import type { PdfFileGateway } from "../platform/pdfFileGateway";
 import type { SessionSnapshot, SessionStore } from "./sessionStore";
 
 const restoredSession: SessionSnapshot = {
@@ -33,5 +35,45 @@ describe("session restore", () => {
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({ isScrollBound: false, version: 1 }),
     );
+  });
+
+  it("reopens native PDF paths from the previous session", async () => {
+    const session = {
+      ...restoredSession,
+      panes: {
+        ...restoredSession.panes,
+        left: {
+          filePath: "/docs/source.pdf",
+          scrollProgress: 0.25,
+          scale: 1.2,
+        },
+      },
+    } satisfies SessionSnapshot;
+    const store: SessionStore = {
+      load: vi.fn().mockReturnValue(session),
+      save: vi.fn().mockReturnValue(true),
+      clear: vi.fn(),
+    };
+    const document = {
+      numPages: 0,
+      getPage: vi.fn(),
+      destroy: vi.fn().mockResolvedValue(undefined),
+    } satisfies PdfDocument;
+    const loader: PdfLoader = { load: vi.fn().mockResolvedValue(document) };
+    const reopenedFile = new File(["pdf"], "source.pdf", { type: "application/pdf" });
+    const gateway: PdfFileGateway = {
+      isAvailable: true,
+      pickPdf: vi.fn(),
+      reopenPdf: vi.fn().mockResolvedValue({
+        file: reopenedFile,
+        path: "/docs/source.pdf",
+      }),
+    };
+
+    render(<App sessionStore={store} loader={loader} fileGateway={gateway} />);
+
+    expect(await screen.findByText("source.pdf")).toBeTruthy();
+    expect(gateway.reopenPdf).toHaveBeenCalledWith("/docs/source.pdf");
+    expect(screen.getByText("120%")).toBeTruthy();
   });
 });
