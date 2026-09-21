@@ -2,14 +2,49 @@ import { useCallback, useRef, useState } from "react";
 import { DocumentPane, type PaneSide } from "./components/DocumentPane";
 import { mapScrollProgress } from "./domain/sync";
 import { pdfLoader, type PdfLoader } from "./pdf/pdfLoader";
+import {
+  createSessionStore,
+  type SessionSnapshot,
+  type SessionStore,
+} from "./session/sessionStore";
 import "./styles.css";
 
 export interface AppProps {
   loader?: PdfLoader;
+  sessionStore?: SessionStore;
 }
 
-export function App({ loader = pdfLoader }: AppProps) {
-  const [isScrollBound, setIsScrollBound] = useState(false);
+function createEmptySession(): SessionSnapshot {
+  return {
+    version: 1,
+    isScrollBound: false,
+    splitRatio: 0.5,
+    panes: {
+      left: { filePath: null, scrollProgress: 0, scale: 1 },
+      right: { filePath: null, scrollProgress: 0, scale: 1 },
+    },
+    recentPairs: [],
+  };
+}
+
+function createDefaultStore(): SessionStore {
+  if (typeof window === "undefined") {
+    return {
+      load: () => null,
+      save: () => false,
+      clear: () => undefined,
+    };
+  }
+  return createSessionStore(window.localStorage);
+}
+
+export function App({ loader = pdfLoader, sessionStore }: AppProps) {
+  const storeRef = useRef(sessionStore ?? createDefaultStore());
+  const [initialSession] = useState(
+    () => storeRef.current.load() ?? createEmptySession(),
+  );
+  const sessionRef = useRef(initialSession);
+  const [isScrollBound, setIsScrollBound] = useState(initialSession.isScrollBound);
   const [activeSide, setActiveSide] = useState<PaneSide>("left");
   const activeSideRef = useRef<PaneSide>("left");
   const suppressedSideRef = useRef<PaneSide | null>(null);
@@ -66,6 +101,10 @@ export function App({ loader = pdfLoader }: AppProps) {
     if (nextBound) {
       synchronizeFrom(activeSideRef.current);
     }
+
+    const nextSession = { ...sessionRef.current, isScrollBound: nextBound };
+    sessionRef.current = nextSession;
+    storeRef.current.save(nextSession);
     setIsScrollBound(nextBound);
   }
 
