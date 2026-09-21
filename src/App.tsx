@@ -30,6 +30,7 @@ function createEmptySession(): SessionSnapshot {
       right: { filePath: null, scrollProgress: 0, scale: 1 },
     },
     recentPairs: [],
+    scrollAnchor: null,
   };
 }
 
@@ -56,6 +57,11 @@ export function App({
   const sessionRef = useRef(initialSession);
   const [isScrollBound, setIsScrollBound] = useState(initialSession.isScrollBound);
   const [splitRatio, setSplitRatio] = useState(initialSession.splitRatio);
+  const [scrollAnchor, setScrollAnchor] = useState(initialSession.scrollAnchor ?? null);
+  const [availablePanes, setAvailablePanes] = useState<Record<PaneSide, boolean>>({
+    left: false,
+    right: false,
+  });
   const [activeSide, setActiveSide] = useState<PaneSide>("left");
   const activeSideRef = useRef<PaneSide>("left");
   const suppressedSideRef = useRef<PaneSide | null>(null);
@@ -67,6 +73,12 @@ export function App({
 
   const registerPane = useCallback((side: PaneSide, element: HTMLDivElement | null) => {
     panesRef.current[side] = element;
+  }, []);
+
+  const updatePaneAvailability = useCallback((side: PaneSide, available: boolean) => {
+    setAvailablePanes((current) =>
+      current[side] === available ? current : { ...current, [side]: available },
+    );
   }, []);
 
   const markActive = useCallback((side: PaneSide) => {
@@ -113,14 +125,26 @@ export function App({
     }
 
     suppressedSideRef.current = targetSide;
+    const anchor = scrollAnchor
+      ? sourceSide === "left"
+        ? {
+            sourceProgress: scrollAnchor.leftProgress,
+            targetProgress: scrollAnchor.rightProgress,
+          }
+        : {
+            sourceProgress: scrollAnchor.rightProgress,
+            targetProgress: scrollAnchor.leftProgress,
+          }
+      : null;
     target.scrollTop = mapScrollProgress(
       {
         scrollTop: source.scrollTop,
         maxScrollTop: source.scrollHeight - source.clientHeight,
       },
       { maxScrollTop: target.scrollHeight - target.clientHeight },
+      anchor,
     );
-  }, []);
+  }, [scrollAnchor]);
 
   const handleScroll = useCallback(
     (side: PaneSide) => {
@@ -155,6 +179,34 @@ export function App({
     sessionRef.current = nextSession;
     storeRef.current.save(nextSession);
     setSplitRatio(nextRatio);
+  }
+
+  function setCurrentPositionsAsAnchor() {
+    const left = panesRef.current.left;
+    const right = panesRef.current.right;
+    if (!left || !right) {
+      return;
+    }
+
+    const progress = (element: HTMLDivElement) => {
+      const maximum = element.scrollHeight - element.clientHeight;
+      return maximum > 0 ? Math.min(1, Math.max(0, element.scrollTop / maximum)) : 0;
+    };
+    const nextAnchor = {
+      leftProgress: progress(left),
+      rightProgress: progress(right),
+    };
+    const nextSession = { ...sessionRef.current, scrollAnchor: nextAnchor };
+    sessionRef.current = nextSession;
+    storeRef.current.save(nextSession);
+    setScrollAnchor(nextAnchor);
+  }
+
+  function clearScrollAnchor() {
+    const nextSession = { ...sessionRef.current, scrollAnchor: null };
+    sessionRef.current = nextSession;
+    storeRef.current.save(nextSession);
+    setScrollAnchor(null);
   }
 
   function handleDividerPointerDown(event: PointerEvent<HTMLDivElement>) {
@@ -215,6 +267,25 @@ export function App({
           </span>
           <button
             type="button"
+            className={scrollAnchor ? "anchor-button anchor-button--active" : "anchor-button"}
+            disabled={!availablePanes.left || !availablePanes.right}
+            onClick={setCurrentPositionsAsAnchor}
+            title="将左右当前位置标记为对应位置"
+          >
+            {scrollAnchor ? "重新校准" : "校准位置"}
+          </button>
+          {scrollAnchor ? (
+            <button
+              type="button"
+              className="clear-anchor-button"
+              aria-label="清除位置校准"
+              onClick={clearScrollAnchor}
+            >
+              ×
+            </button>
+          ) : null}
+          <button
+            type="button"
             className={isScrollBound ? "bind-button bind-button--active" : "bind-button"}
             aria-pressed={isScrollBound}
             onClick={toggleScrollBinding}
@@ -239,6 +310,7 @@ export function App({
           fileGateway={fileGateway}
           initialSession={initialSession.panes.left}
           onStateChange={updatePaneState}
+          onAvailabilityChange={updatePaneAvailability}
           onScrollContainer={registerPane}
           onScroll={handleScroll}
           onInteraction={markActive}
@@ -270,6 +342,7 @@ export function App({
           fileGateway={fileGateway}
           initialSession={initialSession.panes.right}
           onStateChange={updatePaneState}
+          onAvailabilityChange={updatePaneAvailability}
           onScrollContainer={registerPane}
           onScroll={handleScroll}
           onInteraction={markActive}
