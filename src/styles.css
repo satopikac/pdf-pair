@@ -164,11 +164,20 @@ label:has(input:focus-visible),
 .workspace {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+  grid-template-columns: minmax(0, calc(var(--left-pane, 50%) - 9px)) 18px minmax(0, calc(var(--right-pane, 50%) - 9px));
   padding: 16px 18px;
 }
 
-.workspace-divider { position: relative; display: grid; place-items: center; }
+.workspace-divider {
+  position: relative;
+  display: grid;
+  place-items: center;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.workspace-divider:focus-visible { outline: none; }
 
 .workspace-divider::before {
   content: "";
@@ -191,6 +200,15 @@ label:has(input:focus-visible),
   font-size: 11px;
   font-weight: 800;
   z-index: 1;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.workspace-divider:hover span,
+.workspace-divider:focus-visible span {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: rgb(91 92 226 / 35%);
+  transform: scale(1.08);
 }
 
 .workspace[data-bound="true"] .workspace-divider::before { background: rgb(91 92 226 / 45%); }
@@ -472,6 +490,7 @@ label:has(input:focus-visible),
   .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(520px, 70vh) 18px minmax(520px, 70vh); }
   .workspace-divider::before { inset: 8px 10px; width: auto; height: 2px; }
   .workspace-divider span { width: 28px; height: 18px; }
+  .workspace-divider { cursor: default; pointer-events: none; }
   .document-panel { min-height: 520px; }
 }
 

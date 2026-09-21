@@ -43,5 +43,11 @@ describe("session store", () => {
 
     storage.setItem("pdf-pair.session", JSON.stringify({ ...snapshot, version: 2 }));
     expect(store.load()).toBeNull();
+
+    storage.setItem(
+      "pdf-pair.session",
+      JSON.stringify({ ...snapshot, splitRatio: 0.9 }),
+    );
+    expect(store.load()).toBeNull();
   });
 });

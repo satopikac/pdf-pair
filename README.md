@@ -9,6 +9,8 @@ PDF Pair is an offline-first, open-source PDF comparison reader for Windows and 
 - Bind scrolling by normalized document progress
 - Let either pane become the active scroll driver
 - Zoom each document independently
+- Jump between pages and fit pages to the pane width or height
+- Resize the two reader panes with a pointer or keyboard
 - Restore versioned reader session settings
 - Switch to a stacked layout on narrow windows
 - Run inside a Tauri desktop shell
@@ -29,7 +31,7 @@ npm run tauri dev
 
 ## Project status
 
-The MVP is under active development. Session storage currently persists reader settings; reopening files by native path, page navigation, text selection, password prompts, and draggable pane sizing are still in progress.
+The MVP is under active development. Session storage currently persists reader settings; reopening files by native path, text selection, and password prompts are still in progress.
 
 Planned post-MVP work is linked search, manual correspondence anchors, and text-difference highlighting.
 

@@ -69,6 +69,8 @@ function isSessionSnapshot(value: unknown): value is SessionSnapshot {
   return (
     typeof value.isScrollBound === "boolean" &&
     isFiniteNumber(value.splitRatio) &&
+    value.splitRatio >= 0.25 &&
+    value.splitRatio <= 0.75 &&
     isRecord(value.panes) &&
     isPaneSession(value.panes.left) &&
     isPaneSession(value.panes.right) &&

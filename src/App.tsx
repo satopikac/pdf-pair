@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { DocumentPane, type PaneSide } from "./components/DocumentPane";
 import { mapScrollProgress } from "./domain/sync";
 import { pdfLoader, type PdfLoader } from "./pdf/pdfLoader";
@@ -45,6 +46,7 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
   );
   const sessionRef = useRef(initialSession);
   const [isScrollBound, setIsScrollBound] = useState(initialSession.isScrollBound);
+  const [splitRatio, setSplitRatio] = useState(initialSession.splitRatio);
   const [activeSide, setActiveSide] = useState<PaneSide>("left");
   const activeSideRef = useRef<PaneSide>("left");
   const suppressedSideRef = useRef<PaneSide | null>(null);
@@ -52,6 +54,7 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
     left: null,
     right: null,
   });
+  const isResizingRef = useRef(false);
 
   const registerPane = useCallback((side: PaneSide, element: HTMLDivElement | null) => {
     panesRef.current[side] = element;
@@ -108,6 +111,49 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
     setIsScrollBound(nextBound);
   }
 
+  function updateSplitRatio(requestedRatio: number) {
+    const nextRatio = Math.round(Math.min(0.75, Math.max(0.25, requestedRatio)) * 100) / 100;
+    const nextSession = { ...sessionRef.current, splitRatio: nextRatio };
+    sessionRef.current = nextSession;
+    storeRef.current.save(nextSession);
+    setSplitRatio(nextRatio);
+  }
+
+  function handleDividerPointerDown(event: PointerEvent<HTMLDivElement>) {
+    isResizingRef.current = true;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleDividerPointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!isResizingRef.current) {
+      return;
+    }
+
+    const workspace = event.currentTarget.parentElement;
+    if (!workspace) {
+      return;
+    }
+
+    const bounds = workspace.getBoundingClientRect();
+    if (bounds.width > 0) {
+      updateSplitRatio((event.clientX - bounds.left) / bounds.width);
+    }
+  }
+
+  function handleDividerKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
+    }
+
+    event.preventDefault();
+    updateSplitRatio(splitRatio + (event.key === "ArrowRight" ? 0.05 : -0.05));
+  }
+
+  const workspaceStyle = {
+    "--left-pane": `${Math.round(splitRatio * 100)}%`,
+    "--right-pane": `${Math.round((1 - splitRatio) * 100)}%`,
+  } as CSSProperties;
+
   return (
     <main className="app-shell">
       <header className="app-toolbar">
@@ -143,7 +189,11 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
         </div>
       </header>
 
-      <div className="workspace" data-bound={isScrollBound}>
+      <div
+        className="workspace"
+        data-bound={isScrollBound}
+        style={workspaceStyle}
+      >
         <DocumentPane
           side="left"
           loader={loader}
@@ -152,8 +202,25 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
           onScroll={handleScroll}
           onInteraction={markActive}
         />
-        <div className="workspace-divider" aria-hidden="true">
-          <span>{isScrollBound ? "↕" : "·"}</span>
+        <div
+          className="workspace-divider"
+          role="separator"
+          aria-label="调整文档宽度"
+          aria-orientation="vertical"
+          aria-valuemin={25}
+          aria-valuemax={75}
+          aria-valuenow={Math.round(splitRatio * 100)}
+          aria-valuetext={`左侧 ${Math.round(splitRatio * 100)}%，右侧 ${Math.round((1 - splitRatio) * 100)}%`}
+          tabIndex={0}
+          title="拖动调整宽度，双击恢复均分"
+          onPointerDown={handleDividerPointerDown}
+          onPointerMove={handleDividerPointerMove}
+          onPointerUp={() => (isResizingRef.current = false)}
+          onPointerCancel={() => (isResizingRef.current = false)}
+          onDoubleClick={() => updateSplitRatio(0.5)}
+          onKeyDown={handleDividerKeyDown}
+        >
+          <span aria-hidden="true">{isScrollBound ? "↕" : "·"}</span>
         </div>
         <DocumentPane
           side="right"
