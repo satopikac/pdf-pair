@@ -1,0 +1,38 @@
+name: Bug report
+description: Report broken or unexpected PDF Pair behavior
+title: "[Bug]: "
+labels: [needs-triage]
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows 10/11
+        - Ubuntu 22.04
+        - Ubuntu 24.04
+        - Other Linux
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Include the expected behavior and the actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open two PDFs
+        2. Enable synchronized scrolling
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: document
+    attributes:
+      label: PDF characteristics
+      description: Page count, approximate file size, scanned/text PDF, and whether it is password protected. Do not upload confidential PDFs.
