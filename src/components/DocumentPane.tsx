@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, UIEvent } from "react";
 import type { PdfDocument, PdfLoader } from "../pdf/pdfLoader";
 import type { PdfFileGateway } from "../platform/pdfFileGateway";
@@ -77,7 +77,16 @@ export function DocumentPane({
   const passwordCancelledRef = useRef(false);
   const documentRef = useRef<PdfDocument | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollProgressRef = useRef<number | null>(null);
   const restoredPathRef = useRef(false);
+
+  const attachScrollContainer = useCallback(
+    (element: HTMLDivElement | null) => {
+      scrollContainerRef.current = element;
+      onScrollContainer?.(side, element);
+    },
+    [onScrollContainer, side],
+  );
 
   useEffect(() => {
     return () => {
@@ -89,6 +98,25 @@ export function DocumentPane({
   useEffect(() => {
     onAvailabilityChange?.(side, Boolean(loaded));
   }, [loaded, onAvailabilityChange, side]);
+
+  useEffect(() => {
+    if (!loaded || pendingScrollProgressRef.current === null) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      const element = scrollContainerRef.current;
+      const progress = pendingScrollProgressRef.current;
+      if (!element || progress === null) {
+        return;
+      }
+      const maxScrollTop = element.scrollHeight - element.clientHeight;
+      element.scrollTop = progress * Math.max(0, maxScrollTop);
+      pendingScrollProgressRef.current = null;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [loaded]);
 
   useEffect(() => {
     const path = initialSession?.filePath;
@@ -127,6 +155,12 @@ export function DocumentPane({
       documentRef.current = nextDocument;
       onDocumentChange?.(side, nextDocument);
       const nextScale = restore ? (initialSession?.scale ?? 1) : 1;
+      pendingScrollProgressRef.current = restore
+        ? (initialSession?.scrollProgress ?? 0)
+        : null;
+      if (!restore && scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+      }
       setLoaded({ fileName: file.name, filePath, document: nextDocument });
       setScale(nextScale);
       setCurrentPage(1);
@@ -521,16 +555,7 @@ export function DocumentPane({
         </div>
       ) : loaded ? (
         <div
-          ref={(element) => {
-            scrollContainerRef.current = element;
-            onScrollContainer?.(side, element);
-            if (element && initialSession?.scrollProgress) {
-              requestAnimationFrame(() => {
-                const maxScrollTop = element.scrollHeight - element.clientHeight;
-                element.scrollTop = initialSession.scrollProgress * Math.max(0, maxScrollTop);
-              });
-            }
-          }}
+          ref={attachScrollContainer}
           className="document-scroll"
           role="region"
           aria-label={`${label} PDF 滚动区域`}

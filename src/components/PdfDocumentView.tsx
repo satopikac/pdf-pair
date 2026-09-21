@@ -37,10 +37,7 @@ function PdfPageCanvas({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting) {
-          setShouldRender(true);
-          observer.disconnect();
-        }
+        setShouldRender(Boolean(entry?.isIntersecting));
       },
       { rootMargin: "800px 0px" },
     );
@@ -60,6 +57,7 @@ function PdfPageCanvas({
 
     async function renderPage() {
       try {
+        setError(false);
         const page = await document.getPage(pageNumber);
         if (cancelled) {
           return;
@@ -89,24 +87,30 @@ function PdfPageCanvas({
 
         const textContainer = textLayerRef.current;
         if (textContainer && typeof page.getTextContent === "function" && !cancelled) {
-          textContainer.replaceChildren();
-          const textContent = await page.getTextContent();
-          textLayer = new TextLayer({
-            textContentSource: textContent,
-            container: textContainer,
-            viewport,
-          });
-          await textLayer.render();
+          try {
+            textContainer.replaceChildren();
+            const textContent = await page.getTextContent();
+            textLayer = new TextLayer({
+              textContentSource: textContent,
+              container: textContainer,
+              viewport,
+            });
+            await textLayer.render();
 
-          const normalizedQuery = searchQuery.toLocaleLowerCase();
-          if (normalizedQuery) {
-            for (const textDiv of textLayer.textDivs) {
-              if (textDiv.textContent?.toLocaleLowerCase().includes(normalizedQuery)) {
-                textDiv.classList.add(
-                  pageNumber === activeSearchPage ? "search-hit--active" : "search-hit",
-                );
+            const normalizedQuery = searchQuery.toLocaleLowerCase();
+            if (normalizedQuery) {
+              for (const textDiv of textLayer.textDivs) {
+                if (textDiv.textContent?.toLocaleLowerCase().includes(normalizedQuery)) {
+                  textDiv.classList.add(
+                    pageNumber === activeSearchPage ? "search-hit--active" : "search-hit",
+                  );
+                }
               }
             }
+          } catch {
+            // Text selection/search is an enhancement. Keep the successfully
+            // rendered canvas visible if a WebKit/PDF text-layer feature fails.
+            textContainer.replaceChildren();
           }
         }
       } catch (caught) {
@@ -122,6 +126,14 @@ function PdfPageCanvas({
       cancelled = true;
       renderTask?.cancel();
       textLayer?.cancel();
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.width = 0;
+        canvas.height = 0;
+        canvas.style.width = "0px";
+        canvas.style.height = "0px";
+      }
+      textLayerRef.current?.replaceChildren();
     };
   }, [activeSearchPage, document, pageNumber, scale, searchQuery, shouldRender]);
 

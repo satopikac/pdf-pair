@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../App";
@@ -38,6 +38,12 @@ describe("session restore", () => {
   });
 
   it("reopens native PDF paths from the previous session", async () => {
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
     const session = {
       ...restoredSession,
       panes: {
@@ -55,8 +61,11 @@ describe("session restore", () => {
       clear: vi.fn(),
     };
     const document = {
-      numPages: 0,
-      getPage: vi.fn(),
+      numPages: 2,
+      getPage: vi.fn().mockResolvedValue({
+        getViewport: () => ({ width: 600, height: 800 }),
+        render: () => ({ promise: Promise.resolve(), cancel: vi.fn() }),
+      }),
       destroy: vi.fn().mockResolvedValue(undefined),
     } satisfies PdfDocument;
     const loader: PdfLoader = { load: vi.fn().mockResolvedValue(document) };
@@ -75,5 +84,18 @@ describe("session restore", () => {
     expect(await screen.findByText("source.pdf")).toBeTruthy();
     expect(gateway.reopenPdf).toHaveBeenCalledWith("/docs/source.pdf");
     expect(screen.getByText("120%")).toBeTruthy();
+
+    const region = screen.getByRole("region", { name: "左侧 PDF 滚动区域" });
+    Object.defineProperties(region, {
+      clientHeight: { configurable: true, value: 500 },
+      scrollHeight: { configurable: true, value: 2000 },
+    });
+    fireEvent.scroll(region);
+    await waitFor(() => {
+      const input = screen.getByRole("spinbutton", { name: "跳转左侧 PDF 页码" });
+      expect((input as HTMLInputElement).value).toBe("2");
+    });
+    expect(requestAnimationFrame).toHaveBeenCalledOnce();
+    requestAnimationFrame.mockRestore();
   });
 });
