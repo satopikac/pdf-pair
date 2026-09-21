@@ -1,32 +1,7 @@
 import { useState } from "react";
+import { DocumentPane } from "./components/DocumentPane";
+import { pdfLoader } from "./pdf/pdfLoader";
 import "./styles.css";
-
-interface EmptyDocumentPanelProps {
-  side: "left" | "right";
-}
-
-function EmptyDocumentPanel({ side }: EmptyDocumentPanelProps) {
-  const label = side === "left" ? "左侧" : "右侧";
-
-  return (
-    <section className="document-panel" aria-label={`${label} PDF 面板`}>
-      <header className="panel-toolbar">
-        <span className="panel-label">{label}文档</span>
-        <span className="panel-status">尚未打开</span>
-      </header>
-      <div className="empty-document">
-        <div className="empty-document__icon" aria-hidden="true">
-          PDF
-        </div>
-        <h2>打开一个 PDF</h2>
-        <p>拖放文件到这里，或从本地选择文件</p>
-        <button type="button" className="secondary-button">
-          选择 PDF
-        </button>
-      </div>
-    </section>
-  );
-}
 
 export function App() {
   const [isScrollBound, setIsScrollBound] = useState(false);
@@ -50,9 +25,9 @@ export function App() {
       </header>
 
       <div className="workspace" data-bound={isScrollBound}>
-        <EmptyDocumentPanel side="left" />
+        <DocumentPane side="left" loader={pdfLoader} />
         <div className="workspace-divider" aria-hidden="true" />
-        <EmptyDocumentPanel side="right" />
+        <DocumentPane side="right" loader={pdfLoader} />
       </div>
 
       <footer className="status-bar">
