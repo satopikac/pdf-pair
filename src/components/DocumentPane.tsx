@@ -3,6 +3,7 @@ import type { ChangeEvent, DragEvent, FormEvent, UIEvent } from "react";
 import type { PdfDocument, PdfLoader } from "../pdf/pdfLoader";
 import type { PdfFileGateway } from "../platform/pdfFileGateway";
 import type { PaneSession } from "../session/sessionStore";
+import { searchPdf, type PdfSearchResult } from "../pdf/searchPdf";
 import { PdfDocumentView } from "./PdfDocumentView";
 
 export type PaneSide = "left" | "right";
@@ -56,6 +57,12 @@ export function DocumentPane({
   const [scale, setScale] = useState(initialSession?.scale ?? 1);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageDraft, setPageDraft] = useState("1");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchDraft, setSearchDraft] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<PdfSearchResult[]>([]);
+  const [searchIndex, setSearchIndex] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
   const documentRef = useRef<PdfDocument | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const restoredPathRef = useRef(false);
@@ -98,6 +105,8 @@ export function DocumentPane({
       setScale(nextScale);
       setCurrentPage(1);
       setPageDraft("1");
+      setSearchQuery("");
+      setSearchResults([]);
       onStateChange?.(side, {
         filePath,
         scale: nextScale,
@@ -218,6 +227,37 @@ export function DocumentPane({
     }
   }
 
+  async function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!loaded || !searchDraft.trim()) {
+      setSearchQuery("");
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const results = await searchPdf(loaded.document, searchDraft);
+      setSearchQuery(searchDraft.trim());
+      setSearchResults(results);
+      setSearchIndex(0);
+      if (results[0]) {
+        goToPage(results[0].pageNumber);
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  function moveSearchResult(delta: number) {
+    if (searchResults.length === 0) {
+      return;
+    }
+    const nextIndex = (searchIndex + delta + searchResults.length) % searchResults.length;
+    setSearchIndex(nextIndex);
+    goToPage(searchResults[nextIndex]!.pageNumber);
+  }
+
   const fileInput = (accessibleLabel: string) => (
     <input
       className="visually-hidden"
@@ -247,7 +287,8 @@ export function DocumentPane({
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
     >
-      <header className="panel-toolbar">
+      <div className="panel-chrome">
+        <header className="panel-toolbar">
         <div className="panel-title-group">
           <span className="panel-side-badge">{label}</span>
           <span className="panel-label" title={loaded?.fileName}>
@@ -336,10 +377,60 @@ export function DocumentPane({
             >
               +
             </button>
+            <button
+              type="button"
+              className={isSearchOpen ? "tool-button tool-button--active" : "tool-button"}
+              aria-label={`搜索${label} PDF`}
+              aria-pressed={isSearchOpen}
+              onClick={() => setIsSearchOpen((open) => !open)}
+            >
+              ⌕
+            </button>
             {fileControl("替换", "compact-button", `选择${label} PDF 文件`)}
           </div>
         ) : null}
-      </header>
+        </header>
+        {loaded && isSearchOpen ? (
+          <form className="search-bar" role="search" onSubmit={submitSearch}>
+            <input
+              type="search"
+              value={searchDraft}
+              aria-label={`在${label} PDF 中搜索`}
+              placeholder="搜索文档文字"
+              autoFocus
+              onChange={(event) => setSearchDraft(event.target.value)}
+            />
+            <button type="submit" className="search-submit" disabled={isSearching}>
+              {isSearching ? "搜索中…" : "搜索"}
+            </button>
+            <output className="search-status" aria-live="polite">
+              {searchQuery
+                ? searchResults.length > 0
+                  ? `${searchIndex + 1}/${searchResults.length} 页 · ${searchResults.reduce((total, result) => total + result.occurrences, 0)} 处`
+                  : "未找到"
+                : ""}
+            </output>
+            <button
+              type="button"
+              className="tool-button"
+              aria-label={`上一个搜索结果（${label}）`}
+              disabled={searchResults.length === 0}
+              onClick={() => moveSearchResult(-1)}
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              className="tool-button"
+              aria-label={`下一个搜索结果（${label}）`}
+              disabled={searchResults.length === 0}
+              onClick={() => moveSearchResult(1)}
+            >
+              ↓
+            </button>
+          </form>
+        ) : null}
+      </div>
 
       {error ? (
         <div className="document-message" role="alert">
@@ -372,7 +463,12 @@ export function DocumentPane({
           onKeyDown={() => onInteraction?.(side)}
           onScroll={handleScroll}
         >
-          <PdfDocumentView document={loaded.document} scale={scale} />
+          <PdfDocumentView
+            document={loaded.document}
+            scale={scale}
+            searchQuery={searchQuery}
+            activeSearchPage={searchResults[searchIndex]?.pageNumber}
+          />
         </div>
       ) : (
         <div className="empty-document">

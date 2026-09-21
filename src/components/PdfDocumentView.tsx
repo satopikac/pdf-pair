@@ -1,19 +1,28 @@
 import { useEffect, useRef, useState } from "react";
-import type { RenderTask } from "pdfjs-dist";
+import { TextLayer, type RenderTask } from "pdfjs-dist";
 import type { PdfDocument } from "../pdf/pdfLoader";
 
 export interface PdfDocumentViewProps {
   document: PdfDocument;
   scale: number;
+  searchQuery?: string;
+  activeSearchPage?: number;
 }
 
 interface PdfPageCanvasProps extends PdfDocumentViewProps {
   pageNumber: number;
 }
 
-function PdfPageCanvas({ document, pageNumber, scale }: PdfPageCanvasProps) {
+function PdfPageCanvas({
+  document,
+  pageNumber,
+  scale,
+  searchQuery = "",
+  activeSearchPage,
+}: PdfPageCanvasProps) {
   const frameRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const textLayerRef = useRef<HTMLDivElement | null>(null);
   const [shouldRender, setShouldRender] = useState(
     () => typeof IntersectionObserver === "undefined",
   );
@@ -47,6 +56,7 @@ function PdfPageCanvas({ document, pageNumber, scale }: PdfPageCanvasProps) {
 
     let cancelled = false;
     let renderTask: RenderTask | undefined;
+    let textLayer: TextLayer | undefined;
 
     async function renderPage() {
       try {
@@ -60,23 +70,45 @@ function PdfPageCanvas({ document, pageNumber, scale }: PdfPageCanvasProps) {
 
         const canvas = canvasRef.current;
         const context = canvas?.getContext("2d");
-        if (!canvas || !context) {
-          return;
+        if (canvas && context) {
+          const pixelRatio = window.devicePixelRatio || 1;
+          canvas.width = Math.floor(viewport.width * pixelRatio);
+          canvas.height = Math.floor(viewport.height * pixelRatio);
+          canvas.style.width = `${viewport.width}px`;
+          canvas.style.height = `${viewport.height}px`;
+
+          renderTask = page.render({
+            canvas,
+            canvasContext: context,
+            viewport,
+            transform:
+              pixelRatio === 1 ? undefined : [pixelRatio, 0, 0, pixelRatio, 0, 0],
+          });
+          await renderTask.promise;
         }
 
-        const pixelRatio = window.devicePixelRatio || 1;
-        canvas.width = Math.floor(viewport.width * pixelRatio);
-        canvas.height = Math.floor(viewport.height * pixelRatio);
-        canvas.style.width = `${viewport.width}px`;
-        canvas.style.height = `${viewport.height}px`;
+        const textContainer = textLayerRef.current;
+        if (textContainer && typeof page.getTextContent === "function" && !cancelled) {
+          textContainer.replaceChildren();
+          const textContent = await page.getTextContent();
+          textLayer = new TextLayer({
+            textContentSource: textContent,
+            container: textContainer,
+            viewport,
+          });
+          await textLayer.render();
 
-        renderTask = page.render({
-          canvas,
-          canvasContext: context,
-          viewport,
-          transform: pixelRatio === 1 ? undefined : [pixelRatio, 0, 0, pixelRatio, 0, 0],
-        });
-        await renderTask.promise;
+          const normalizedQuery = searchQuery.toLocaleLowerCase();
+          if (normalizedQuery) {
+            for (const textDiv of textLayer.textDivs) {
+              if (textDiv.textContent?.toLocaleLowerCase().includes(normalizedQuery)) {
+                textDiv.classList.add(
+                  pageNumber === activeSearchPage ? "search-hit--active" : "search-hit",
+                );
+              }
+            }
+          }
+        }
       } catch (caught) {
         if (!cancelled && !(caught instanceof Error && caught.name === "RenderingCancelledException")) {
           setError(true);
@@ -89,25 +121,34 @@ function PdfPageCanvas({ document, pageNumber, scale }: PdfPageCanvasProps) {
     return () => {
       cancelled = true;
       renderTask?.cancel();
+      textLayer?.cancel();
     };
-  }, [document, pageNumber, scale, shouldRender]);
+  }, [activeSearchPage, document, pageNumber, scale, searchQuery, shouldRender]);
 
   return (
     <figure
       ref={frameRef}
-      className="pdf-page"
+      className={
+        pageNumber === activeSearchPage ? "pdf-page pdf-page--search-active" : "pdf-page"
+      }
       aria-label={`第 ${pageNumber} 页`}
       data-page-number={pageNumber}
       style={{ width: dimensions.width, minHeight: dimensions.height }}
     >
       <canvas ref={canvasRef} />
+      <div ref={textLayerRef} className="textLayer" />
       {error ? <span className="page-error">这一页无法渲染</span> : null}
       <figcaption>{pageNumber}</figcaption>
     </figure>
   );
 }
 
-export function PdfDocumentView({ document, scale }: PdfDocumentViewProps) {
+export function PdfDocumentView({
+  document,
+  scale,
+  searchQuery,
+  activeSearchPage,
+}: PdfDocumentViewProps) {
   const pages = Array.from({ length: document.numPages }, (_, index) => index + 1);
 
   return (
@@ -118,6 +159,8 @@ export function PdfDocumentView({ document, scale }: PdfDocumentViewProps) {
           document={document}
           pageNumber={pageNumber}
           scale={scale}
+          searchQuery={searchQuery}
+          activeSearchPage={activeSearchPage}
         />
       ))}
     </div>
