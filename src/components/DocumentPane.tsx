@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, DragEvent } from "react";
 import type { PdfDocument, PdfLoader } from "../pdf/pdfLoader";
 import { PdfDocumentView } from "./PdfDocumentView";
 
@@ -25,6 +25,10 @@ const SCALE_STEP = 0.1;
 function changeScale(current: number, delta: number) {
   const next = Math.round((current + delta) * 10) / 10;
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
+}
+
+function isPdfFile(file: File) {
+  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 }
 
 export function DocumentPane({
@@ -74,8 +78,36 @@ export function DocumentPane({
     event.target.value = "";
   }
 
+  function handleDrop(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (!file) {
+      return;
+    }
+    if (!isPdfFile(file)) {
+      setError("请拖放 PDF 文件。");
+      return;
+    }
+    void openFile(file);
+  }
+
+  const fileInput = (accessibleLabel: string) => (
+    <input
+      className="visually-hidden"
+      type="file"
+      accept="application/pdf,.pdf"
+      aria-label={accessibleLabel}
+      onChange={handleFileChange}
+    />
+  );
+
   return (
-    <section className="document-panel" aria-label={`${label} PDF 面板`}>
+    <section
+      className="document-panel"
+      aria-label={`${label} PDF 面板`}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={handleDrop}
+    >
       <header className="panel-toolbar">
         <div className="panel-title-group">
           <span className="panel-label">{loaded?.fileName ?? `${label}文档`}</span>
@@ -112,13 +144,7 @@ export function DocumentPane({
             </button>
             <label className="compact-button">
               替换
-              <input
-                className="visually-hidden"
-                type="file"
-                accept="application/pdf,.pdf"
-                aria-label={`选择${label} PDF 文件`}
-                onChange={handleFileChange}
-              />
+              {fileInput(`选择${label} PDF 文件`)}
             </label>
           </div>
         ) : null}
@@ -128,6 +154,10 @@ export function DocumentPane({
         <div className="document-message" role="alert">
           <strong>PDF 加载失败</strong>
           <span>{error}</span>
+          <label className="secondary-button">
+            重新选择 PDF
+            {fileInput(`重新选择${label} PDF 文件`)}
+          </label>
         </div>
       ) : loaded ? (
         <div
@@ -149,16 +179,10 @@ export function DocumentPane({
             PDF
           </div>
           <h2>打开一个 PDF</h2>
-          <p>从本地选择一个 PDF 文件</p>
+          <p>拖放文件到这里，或从本地选择文件</p>
           <label className="secondary-button">
             选择 PDF
-            <input
-              className="visually-hidden"
-              type="file"
-              accept="application/pdf,.pdf"
-              aria-label={`选择${label} PDF 文件`}
-              onChange={handleFileChange}
-            />
+            {fileInput(`选择${label} PDF 文件`)}
           </label>
         </div>
       )}
