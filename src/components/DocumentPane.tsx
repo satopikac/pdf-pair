@@ -15,6 +15,7 @@ export interface DocumentPaneProps {
   fileGateway?: PdfFileGateway;
   initialSession?: PaneSession;
   onStateChange?: (side: PaneSide, changes: Partial<PaneSession>) => void;
+  onDocumentChange?: (side: PaneSide, document: PdfDocument | null) => void;
   onAvailabilityChange?: (side: PaneSide, available: boolean) => void;
   onScrollContainer?: (side: PaneSide, element: HTMLDivElement | null) => void;
   onScroll?: (side: PaneSide, element: HTMLDivElement) => void;
@@ -52,6 +53,7 @@ export function DocumentPane({
   fileGateway,
   initialSession,
   onStateChange,
+  onDocumentChange,
   onAvailabilityChange,
   onScrollContainer,
   onScroll,
@@ -80,8 +82,9 @@ export function DocumentPane({
   useEffect(() => {
     return () => {
       void documentRef.current?.destroy();
+      onDocumentChange?.(side, null);
     };
-  }, []);
+  }, [onDocumentChange, side]);
 
   useEffect(() => {
     onAvailabilityChange?.(side, Boolean(loaded));
@@ -122,6 +125,7 @@ export function DocumentPane({
       const previousDocument = documentRef.current;
 
       documentRef.current = nextDocument;
+      onDocumentChange?.(side, nextDocument);
       const nextScale = restore ? (initialSession?.scale ?? 1) : 1;
       setLoaded({ fileName: file.name, filePath, document: nextDocument });
       setScale(nextScale);

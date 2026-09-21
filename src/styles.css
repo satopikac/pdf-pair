@@ -194,6 +194,50 @@ label:has(input:focus-visible),
 
 .clear-anchor-button:hover { color: #fff; background: rgb(255 255 255 / 10%); }
 
+.diff-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 30px;
+  background: rgb(20 25 43 / 56%);
+  backdrop-filter: blur(10px);
+  z-index: 20;
+}
+
+.diff-dialog {
+  width: min(1000px, 100%);
+  max-height: min(760px, 90vh);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 28px 90px rgb(15 20 35 / 36%);
+}
+
+.diff-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.diff-dialog__header h2 { margin: 3px 0 0; color: var(--ink); font-size: 19px; }
+.diff-dialog__header .eyebrow { color: var(--muted); font-size: 10px; }
+.diff-empty { display: grid; place-items: center; min-height: 220px; color: var(--muted); font-size: 13px; }
+.diff-pages { overflow: auto; padding: 18px 22px 26px; }
+.diff-page { padding: 0 0 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.diff-page:last-child { margin-bottom: 0; border-bottom: 0; }
+.diff-page h3 { margin: 0 0 10px; color: #46536c; font-size: 12px; }
+.diff-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.diff-columns > div { min-width: 0; padding: 12px; background: #f7f8fb; border: 1px solid var(--line); border-radius: 10px; }
+.diff-column-label { color: var(--muted); font-size: 10px; font-weight: 750; }
+.diff-columns p { min-height: 38px; margin: 8px 0 0; color: #35415a; font-size: 12px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff-removed { color: #a33e52; background: #ffe3e8; text-decoration: line-through; }
+.diff-added { color: #1d805e; background: #d8f6e9; }
+
 .workspace {
   min-height: 0;
   display: grid;
@@ -674,6 +718,13 @@ label:has(input:focus-visible),
   .panel-actions { flex-wrap: wrap; }
   .fit-controls, .fit-controls + .toolbar-separator { display: none; }
   .status-bar { justify-content: center; }
+}
+
+@media (max-width: 640px) {
+  .diff-overlay { padding: 10px; }
+  .diff-columns { grid-template-columns: 1fr; }
+  .diff-dialog__header { padding: 15px; }
+  .diff-pages { padding: 15px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

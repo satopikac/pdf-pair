@@ -15,6 +15,7 @@ PDF Pair is an offline-first, open-source PDF comparison reader for Windows and 
 - Jump between pages and fit pages to the pane width or height
 - Resize the two reader panes with a pointer or keyboard
 - Open password-protected PDFs without storing passwords
+- Compare page text with added and removed word highlighting
 - Restore versioned reader session settings
 - Switch to a stacked layout on narrow windows
 - Run inside a Tauri desktop shell
@@ -38,7 +39,7 @@ npm run tauri:bundle
 
 The MVP is under active development. Session storage currently persists reader settings; reopening files by native path, text selection, and password prompts are still in progress.
 
-The remaining product work is text-difference highlighting and optional code signing.
+The remaining release work is optional code signing and publishing a version tag from a configured GitHub repository.
 
 ## Contributing
 

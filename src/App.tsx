@@ -3,6 +3,8 @@ import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { DocumentPane, type PaneSide } from "./components/DocumentPane";
 import { mapScrollProgress } from "./domain/sync";
 import { pdfLoader, type PdfLoader } from "./pdf/pdfLoader";
+import type { PdfDocument } from "./pdf/pdfLoader";
+import { comparePdfDocuments, type PdfPageDiff } from "./pdf/textDiff";
 import {
   tauriPdfFileGateway,
   type PdfFileGateway,
@@ -62,6 +64,9 @@ export function App({
     left: false,
     right: false,
   });
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [isComparing, setIsComparing] = useState(false);
+  const [pageDiffs, setPageDiffs] = useState<PdfPageDiff[]>([]);
   const [activeSide, setActiveSide] = useState<PaneSide>("left");
   const activeSideRef = useRef<PaneSide>("left");
   const suppressedSideRef = useRef<PaneSide | null>(null);
@@ -70,6 +75,10 @@ export function App({
     right: null,
   });
   const isResizingRef = useRef(false);
+  const documentsRef = useRef<Record<PaneSide, PdfDocument | null>>({
+    left: null,
+    right: null,
+  });
 
   const registerPane = useCallback((side: PaneSide, element: HTMLDivElement | null) => {
     panesRef.current[side] = element;
@@ -80,6 +89,14 @@ export function App({
       current[side] === available ? current : { ...current, [side]: available },
     );
   }, []);
+
+  const handleDocumentChange = useCallback(
+    (side: PaneSide, document: PdfDocument | null) => {
+      documentsRef.current[side] = document;
+      updatePaneAvailability(side, Boolean(document));
+    },
+    [updatePaneAvailability],
+  );
 
   const markActive = useCallback((side: PaneSide) => {
     activeSideRef.current = side;
@@ -209,6 +226,19 @@ export function App({
     setScrollAnchor(null);
   }
 
+  async function openTextDiff() {
+    const left = documentsRef.current.left;
+    const right = documentsRef.current.right;
+    if (!left || !right) return;
+    setDiffOpen(true);
+    setIsComparing(true);
+    try {
+      setPageDiffs(await comparePdfDocuments(left, right));
+    } finally {
+      setIsComparing(false);
+    }
+  }
+
   function handleDividerPointerDown(event: PointerEvent<HTMLDivElement>) {
     isResizingRef.current = true;
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -267,6 +297,14 @@ export function App({
           </span>
           <button
             type="button"
+            className="anchor-button"
+            disabled={!availablePanes.left || !availablePanes.right || isComparing}
+            onClick={() => void openTextDiff()}
+          >
+            {isComparing ? "比较中…" : "文本差异"}
+          </button>
+          <button
+            type="button"
             className={scrollAnchor ? "anchor-button anchor-button--active" : "anchor-button"}
             disabled={!availablePanes.left || !availablePanes.right}
             onClick={setCurrentPositionsAsAnchor}
@@ -311,6 +349,7 @@ export function App({
           initialSession={initialSession.panes.left}
           onStateChange={updatePaneState}
           onAvailabilityChange={updatePaneAvailability}
+          onDocumentChange={handleDocumentChange}
           onScrollContainer={registerPane}
           onScroll={handleScroll}
           onInteraction={markActive}
@@ -343,11 +382,68 @@ export function App({
           initialSession={initialSession.panes.right}
           onStateChange={updatePaneState}
           onAvailabilityChange={updatePaneAvailability}
+          onDocumentChange={handleDocumentChange}
           onScrollContainer={registerPane}
           onScroll={handleScroll}
           onInteraction={markActive}
         />
       </div>
+
+      {diffOpen ? (
+        <div className="diff-overlay" role="dialog" aria-modal="true" aria-label="文本差异">
+          <section className="diff-dialog">
+            <header className="diff-dialog__header">
+              <div>
+                <p className="eyebrow">TEXT DIFFERENCE</p>
+                <h2>文本差异</h2>
+              </div>
+              <button
+                type="button"
+                className="clear-anchor-button"
+                aria-label="关闭文本差异"
+                onClick={() => setDiffOpen(false)}
+              >
+                ×
+              </button>
+            </header>
+            {isComparing ? (
+              <div className="diff-empty">正在提取两份 PDF 的文字…</div>
+            ) : pageDiffs.length === 0 ? (
+              <div className="diff-empty">没有发现文字差异。</div>
+            ) : (
+              <div className="diff-pages">
+                {pageDiffs.map((page) => (
+                  <article className="diff-page" key={page.pageNumber}>
+                    <h3>第 {page.pageNumber} 页</h3>
+                    <div className="diff-columns">
+                      <div>
+                        <span className="diff-column-label">左侧</span>
+                        <p>{page.operations.map((operation, index) =>
+                          operation.kind === "added" ? null : (
+                            <span className={operation.kind === "removed" ? "diff-removed" : ""} key={index}>
+                              {operation.text}
+                            </span>
+                          ),
+                        )}</p>
+                      </div>
+                      <div>
+                        <span className="diff-column-label">右侧</span>
+                        <p>{page.operations.map((operation, index) =>
+                          operation.kind === "removed" ? null : (
+                            <span className={operation.kind === "added" ? "diff-added" : ""} key={index}>
+                              {operation.text}
+                            </span>
+                          ),
+                        )}</p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      ) : null}
 
       <footer className="status-bar">
         <span>
