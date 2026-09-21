@@ -35,6 +35,10 @@ npm run tauri dev
 npm run tauri:bundle
 ```
 
+## 学习教程
+
+面向编程和软件开发初学者的完整项目教程位于 [`docs/learning-guide/index.html`](docs/learning-guide/index.html)，覆盖需求分析、架构、编码、测试、调试、Git、跨平台打包与发布。直接用浏览器打开即可学习。
+
 ## Project status
 
 The MVP is under active development. Session storage currently persists reader settings; reopening files by native path, text selection, and password prompts are still in progress.
