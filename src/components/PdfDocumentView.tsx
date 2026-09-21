@@ -97,6 +97,7 @@ function PdfPageCanvas({ document, pageNumber, scale }: PdfPageCanvasProps) {
       ref={frameRef}
       className="pdf-page"
       aria-label={`第 ${pageNumber} 页`}
+      data-page-number={pageNumber}
       style={{ width: dimensions.width, minHeight: dimensions.height }}
     >
       <canvas ref={canvasRef} />

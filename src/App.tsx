@@ -111,33 +111,54 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
   return (
     <main className="app-shell">
       <header className="app-toolbar">
-        <div>
-          <p className="eyebrow">OFFLINE PDF WORKSPACE</p>
-          <h1>PDF Pair</h1>
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" role="presentation">
+              <rect x="4" y="7" width="14" height="19" rx="3" />
+              <rect x="14" y="4" width="14" height="21" rx="3" />
+              <path d="M18 10h6M18 14h6M18 18h4" />
+            </svg>
+          </span>
+          <div>
+            <h1>PDF Pair</h1>
+            <p className="eyebrow">双文档对照工作台</p>
+          </div>
         </div>
-        <button
-          type="button"
-          className={isScrollBound ? "bind-button bind-button--active" : "bind-button"}
-          aria-pressed={isScrollBound}
-          onClick={toggleScrollBinding}
-        >
-          <span aria-hidden="true">{isScrollBound ? "●" : "○"}</span>
-          {isScrollBound ? "解绑滚动" : "绑定滚动"}
-        </button>
+        <div className="toolbar-actions">
+          <span className="privacy-pill">
+            <span className="privacy-dot" aria-hidden="true" />
+            本地处理
+          </span>
+          <button
+            type="button"
+            className={isScrollBound ? "bind-button bind-button--active" : "bind-button"}
+            aria-pressed={isScrollBound}
+            onClick={toggleScrollBinding}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9.5 14.5 14.5 9M7.2 17.8l-1 1a3.5 3.5 0 0 1-5-5l3.3-3.3a3.5 3.5 0 0 1 5 0M16.8 6.2l1-1a3.5 3.5 0 0 1 5 5l-3.3 3.3a3.5 3.5 0 0 1-5 0" />
+            </svg>
+            {isScrollBound ? "解绑滚动" : "绑定滚动"}
+          </button>
+        </div>
       </header>
 
       <div className="workspace" data-bound={isScrollBound}>
         <DocumentPane
           side="left"
           loader={loader}
+          isActive={activeSide === "left"}
           onScrollContainer={registerPane}
           onScroll={handleScroll}
           onInteraction={markActive}
         />
-        <div className="workspace-divider" aria-hidden="true" />
+        <div className="workspace-divider" aria-hidden="true">
+          <span>{isScrollBound ? "↕" : "·"}</span>
+        </div>
         <DocumentPane
           side="right"
           loader={loader}
+          isActive={activeSide === "right"}
           onScrollContainer={registerPane}
           onScroll={handleScroll}
           onInteraction={markActive}
@@ -146,11 +167,12 @@ export function App({ loader = pdfLoader, sessionStore }: AppProps) {
 
       <footer className="status-bar">
         <span>
+          <span className={isScrollBound ? "status-indicator status-indicator--active" : "status-indicator"} aria-hidden="true" />
           {isScrollBound
             ? `滚动已绑定 · ${activeSide === "left" ? "左侧" : "右侧"}驱动`
             : "两侧独立滚动"}
         </span>
-        <span>本地模式 · 文件不会上传</span>
+        <span className="status-hint">文件仅在此设备中打开，不会上传</span>
       </footer>
     </main>
   );
