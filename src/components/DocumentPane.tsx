@@ -3,9 +3,14 @@ import type { ChangeEvent } from "react";
 import type { PdfDocument, PdfLoader } from "../pdf/pdfLoader";
 import { PdfDocumentView } from "./PdfDocumentView";
 
+export type PaneSide = "left" | "right";
+
 export interface DocumentPaneProps {
-  side: "left" | "right";
+  side: PaneSide;
   loader: PdfLoader;
+  onScrollContainer?: (side: PaneSide, element: HTMLDivElement | null) => void;
+  onScroll?: (side: PaneSide, element: HTMLDivElement) => void;
+  onInteraction?: (side: PaneSide) => void;
 }
 
 interface LoadedDocument {
@@ -13,7 +18,13 @@ interface LoadedDocument {
   document: PdfDocument;
 }
 
-export function DocumentPane({ side, loader }: DocumentPaneProps) {
+export function DocumentPane({
+  side,
+  loader,
+  onScrollContainer,
+  onScroll,
+  onInteraction,
+}: DocumentPaneProps) {
   const label = side === "left" ? "左侧" : "右侧";
   const [loaded, setLoaded] = useState<LoadedDocument | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -85,9 +96,18 @@ export function DocumentPane({ side, loader }: DocumentPaneProps) {
           <span>{error}</span>
         </div>
       ) : loaded ? (
-        <div className="document-message">
-          <strong>PDF 已加载</strong>
-          <span>正在准备页面渲染</span>
+        <div
+          ref={(element) => onScrollContainer?.(side, element)}
+          className="document-scroll"
+          role="region"
+          aria-label={`${label} PDF 滚动区域`}
+          tabIndex={0}
+          onPointerDown={() => onInteraction?.(side)}
+          onWheel={() => onInteraction?.(side)}
+          onKeyDown={() => onInteraction?.(side)}
+          onScroll={(event) => onScroll?.(side, event.currentTarget)}
+        >
+          <PdfDocumentView document={loaded.document} scale={1} />
         </div>
       ) : (
         <div className="empty-document">
