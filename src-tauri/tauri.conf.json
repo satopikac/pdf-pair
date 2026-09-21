@@ -27,7 +27,19 @@
     }
   },
   "bundle": {
-    "active": false,
-    "targets": "all"
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico",
+      "icons/icon.icns"
+    ],
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Offline dual-pane PDF comparison reader",
+    "longDescription": "Read and compare two local PDF documents with synchronized scrolling and independent controls.",
+    "copyright": "Copyright © 2026 PDF Pair contributors"
   }
 }

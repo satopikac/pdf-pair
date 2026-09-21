@@ -27,6 +27,7 @@ npm test
 npm run typecheck
 npm run build
 npm run tauri dev
+npm run tauri:bundle
 ```
 
 Run the Rust-only desktop check with:
@@ -34,6 +35,11 @@ Run the Rust-only desktop check with:
 ```bash
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
+
+The bundle command creates Debian and AppImage packages on Ubuntu, and NSIS/MSI
+installers on Windows. Pushing a `v*` tag runs the release workflow and publishes
+the platform assets to a GitHub Release. Code signing is intentionally not enabled;
+production signing certificates must be added as repository secrets first.
 
 ## Architecture
 

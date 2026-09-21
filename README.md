@@ -31,13 +31,14 @@ npm test
 npm run typecheck
 npm run build
 npm run tauri dev
+npm run tauri:bundle
 ```
 
 ## Project status
 
 The MVP is under active development. Session storage currently persists reader settings; reopening files by native path, text selection, and password prompts are still in progress.
 
-Planned post-MVP work is linked search, manual correspondence anchors, and text-difference highlighting.
+The remaining product work is text-difference highlighting and optional code signing.
 
 ## Contributing
 
