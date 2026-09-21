@@ -343,3 +343,54 @@ button {
   color: #f8fafc;
   background: rgb(23 32 51 / 76%);
   border-radius: 999px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.page-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #9f2f2f;
+  background: #fff1f1;
+}
+
+.panel-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tool-button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #33415a;
+  background: #f4f6fa;
+  border: 1px solid #cbd4e1;
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tool-button:hover:not(:disabled) {
+  background: #e9edf4;
+  border-color: #9aa8bc;
+}
+
+.tool-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.zoom-value {
+  min-width: 43px;
+  color: #56647a;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}

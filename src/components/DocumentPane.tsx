@@ -18,6 +18,15 @@ interface LoadedDocument {
   document: PdfDocument;
 }
 
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 3;
+const SCALE_STEP = 0.1;
+
+function changeScale(current: number, delta: number) {
+  const next = Math.round((current + delta) * 10) / 10;
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
+}
+
 export function DocumentPane({
   side,
   loader,
@@ -29,6 +38,7 @@ export function DocumentPane({
   const [loaded, setLoaded] = useState<LoadedDocument | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scale, setScale] = useState(1);
   const documentRef = useRef<PdfDocument | null>(null);
 
   useEffect(() => {
@@ -47,6 +57,7 @@ export function DocumentPane({
 
       documentRef.current = nextDocument;
       setLoaded({ fileName: file.name, document: nextDocument });
+      setScale(1);
       void previousDocument?.destroy();
     } catch {
       setError("无法打开这个 PDF，请检查文件是否有效。");
@@ -77,16 +88,39 @@ export function DocumentPane({
           </span>
         </div>
         {loaded ? (
-          <label className="compact-button">
-            替换
-            <input
-              className="visually-hidden"
-              type="file"
-              accept="application/pdf,.pdf"
-              aria-label={`选择${label} PDF 文件`}
-              onChange={handleFileChange}
-            />
-          </label>
+          <div className="panel-actions">
+            <button
+              type="button"
+              className="tool-button"
+              aria-label={`缩小${label} PDF`}
+              disabled={scale <= MIN_SCALE}
+              onClick={() => setScale((current) => changeScale(current, -SCALE_STEP))}
+            >
+              −
+            </button>
+            <output className="zoom-value" aria-label={`${label}缩放比例`}>
+              {Math.round(scale * 100)}%
+            </output>
+            <button
+              type="button"
+              className="tool-button"
+              aria-label={`放大${label} PDF`}
+              disabled={scale >= MAX_SCALE}
+              onClick={() => setScale((current) => changeScale(current, SCALE_STEP))}
+            >
+              +
+            </button>
+            <label className="compact-button">
+              替换
+              <input
+                className="visually-hidden"
+                type="file"
+                accept="application/pdf,.pdf"
+                aria-label={`选择${label} PDF 文件`}
+                onChange={handleFileChange}
+              />
+            </label>
+          </div>
         ) : null}
       </header>
 
@@ -107,7 +141,7 @@ export function DocumentPane({
           onKeyDown={() => onInteraction?.(side)}
           onScroll={(event) => onScroll?.(side, event.currentTarget)}
         >
-          <PdfDocumentView document={loaded.document} scale={1} />
+          <PdfDocumentView document={loaded.document} scale={scale} />
         </div>
       ) : (
         <div className="empty-document">
