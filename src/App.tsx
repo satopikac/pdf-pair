@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { DocumentPane, type PaneSide } from "./components/DocumentPane";
 import { mapScrollProgress } from "./domain/sync";
@@ -14,6 +14,12 @@ import {
   type SessionSnapshot,
   type SessionStore,
 } from "./session/sessionStore";
+import {
+  readThemePreference,
+  resolveTheme,
+  saveThemePreference,
+  systemPrefersDark,
+} from "./theme/theme";
 import "./styles.css";
 
 export interface AppProps {
@@ -68,6 +74,10 @@ export function App({
   const [isComparing, setIsComparing] = useState(false);
   const [pageDiffs, setPageDiffs] = useState<PdfPageDiff[]>([]);
   const [activeSide, setActiveSide] = useState<PaneSide>("left");
+  const [themePreference, setThemePreference] = useState(readThemePreference);
+  const [resolvedTheme, setResolvedTheme] = useState(() =>
+    resolveTheme(themePreference, systemPrefersDark()),
+  );
   const activeSideRef = useRef<PaneSide>("left");
   const suppressedSideRef = useRef<PaneSide | null>(null);
   const panesRef = useRef<Record<PaneSide, HTMLDivElement | null>>({
@@ -79,6 +89,28 @@ export function App({
     left: null,
     right: null,
   });
+
+  useEffect(() => {
+    const mediaQuery =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-color-scheme: dark)")
+        : null;
+    const applyTheme = () => {
+      const nextTheme = resolveTheme(themePreference, mediaQuery?.matches ?? false);
+      setResolvedTheme(nextTheme);
+      document.documentElement.dataset.theme = nextTheme;
+      document.documentElement.style.colorScheme = nextTheme;
+    };
+
+    applyTheme();
+    saveThemePreference(themePreference);
+
+    if (themePreference === "system") {
+      mediaQuery?.addEventListener("change", applyTheme);
+    }
+
+    return () => mediaQuery?.removeEventListener("change", applyTheme);
+  }, [themePreference]);
 
   const registerPane = useCallback((side: PaneSide, element: HTMLDivElement | null) => {
     panesRef.current[side] = element;
@@ -275,7 +307,7 @@ export function App({
   } as CSSProperties;
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-theme={resolvedTheme}>
       <header className="app-toolbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">
@@ -291,6 +323,17 @@ export function App({
           </div>
         </div>
         <div className="toolbar-actions">
+          <div className="theme-switcher" role="group" aria-label="界面主题">
+            <button type="button" className={themePreference === "system" ? "theme-option theme-option--active" : "theme-option"} aria-label="跟随系统主题" aria-pressed={themePreference === "system"} title="跟随系统" onClick={() => setThemePreference("system")}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="12" rx="2" /><path d="M9 20h6M12 16.5V20" /></svg>
+            </button>
+            <button type="button" className={themePreference === "light" ? "theme-option theme-option--active" : "theme-option"} aria-label="浅色主题" aria-pressed={themePreference === "light"} title="浅色主题" onClick={() => setThemePreference("light")}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" /><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" /></svg>
+            </button>
+            <button type="button" className={themePreference === "dark" ? "theme-option theme-option--active" : "theme-option"} aria-label="深色主题" aria-pressed={themePreference === "dark"} title="深色主题" onClick={() => setThemePreference("dark")}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.2A8.4 8.4 0 0 1 8.8 3.8 8.5 8.5 0 1 0 20.2 15.2Z" /></svg>
+            </button>
+          </div>
           <span className="privacy-pill">
             <span className="privacy-dot" aria-hidden="true" />
             本地处理

@@ -1,17 +1,56 @@
 :root {
-  color: #182033;
-  background: #eef1f7;
+  color: #172033;
+  background: #e7edf7;
   font-family: Inter, "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --ink: #182033;
-  --muted: #738099;
-  --line: #d9dfeb;
-  --surface-soft: #f7f8fb;
-  --accent: #5b5ce2;
-  --accent-dark: #4748c7;
-  --accent-soft: #eeefff;
-  --shadow: 0 18px 48px rgb(36 46 79 / 9%), 0 2px 8px rgb(36 46 79 / 5%);
+  --ink: #172033;
+  --muted: #65728a;
+  --line: rgb(86 102 132 / 18%);
+  --surface-soft: rgb(245 248 253 / 66%);
+  --accent: #6266e8;
+  --accent-dark: #4c50d0;
+  --accent-soft: rgb(98 102 232 / 12%);
+  --app-background: radial-gradient(circle at 12% 2%, rgb(129 139 255 / 34%), transparent 30%), radial-gradient(circle at 88% 12%, rgb(71 203 198 / 22%), transparent 28%), linear-gradient(145deg, #edf3fb 0%, #dae4f2 52%, #eef2f8 100%);
+  --glass-toolbar: rgb(249 252 255 / 70%);
+  --glass-panel: rgb(249 251 255 / 58%);
+  --glass-strong: rgb(255 255 255 / 78%);
+  --glass-control: rgb(255 255 255 / 48%);
+  --glass-control-hover: rgb(255 255 255 / 76%);
+  --glass-border: rgb(255 255 255 / 68%);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 72%);
+  --reader-background: #bcc6d4;
+  --reader-pattern: rgb(255 255 255 / 12%);
+  --shadow: 0 20px 54px rgb(43 57 86 / 14%), 0 2px 8px rgb(43 57 86 / 6%);
+  --shadow-active: 0 24px 60px rgb(43 57 86 / 18%), 0 0 0 3px rgb(98 102 232 / 9%);
+  --overlay: rgb(19 26 43 / 48%);
+  --success: #168665;
+}
+
+:root[data-theme="dark"] {
+  color: #edf1fb;
+  background: #0d1320;
+  --ink: #edf1fb;
+  --muted: #9da9bd;
+  --line: rgb(202 214 238 / 13%);
+  --surface-soft: rgb(18 25 40 / 72%);
+  --accent: #888bff;
+  --accent-dark: #a5a7ff;
+  --accent-soft: rgb(136 139 255 / 16%);
+  --app-background: radial-gradient(circle at 12% 0%, rgb(89 92 198 / 34%), transparent 31%), radial-gradient(circle at 90% 8%, rgb(26 136 145 / 22%), transparent 28%), linear-gradient(145deg, #111827 0%, #0b101b 55%, #121827 100%);
+  --glass-toolbar: rgb(18 25 40 / 72%);
+  --glass-panel: rgb(18 25 40 / 62%);
+  --glass-strong: rgb(24 32 50 / 82%);
+  --glass-control: rgb(255 255 255 / 6%);
+  --glass-control-hover: rgb(255 255 255 / 11%);
+  --glass-border: rgb(255 255 255 / 11%);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 8%);
+  --reader-background: #171e2b;
+  --reader-pattern: rgb(255 255 255 / 3%);
+  --shadow: 0 24px 64px rgb(0 0 0 / 28%), 0 2px 8px rgb(0 0 0 / 20%);
+  --shadow-active: 0 26px 68px rgb(0 0 0 / 34%), 0 0 0 3px rgb(136 139 255 / 10%);
+  --overlay: rgb(3 7 15 / 68%);
+  --success: #62d5ae;
 }
 
 * { box-sizing: border-box; }
@@ -22,7 +61,12 @@ html, body, #root {
   margin: 0;
 }
 
-body { overflow: hidden; }
+body {
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--app-background);
+  transition: color 180ms ease, background-color 180ms ease;
+}
 button, input { font: inherit; }
 button, label { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
@@ -679,6 +723,229 @@ label:has(input:focus-visible),
 .status-indicator--active { background: var(--accent); box-shadow: 0 0 0 3px rgb(91 92 226 / 12%); }
 .status-hint { color: #8a95a8; }
 
+/* Acrylic theme: translucent surfaces stay outside the PDF rendering area. */
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  color: var(--ink);
+  background: var(--app-background);
+  background-attachment: fixed;
+  transition: color 180ms ease, background 260ms ease;
+}
+
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, rgb(255 255 255 / 8%), transparent 38%, rgb(255 255 255 / 5%));
+  z-index: -1;
+}
+
+.app-toolbar {
+  color: var(--ink);
+  background: var(--glass-toolbar);
+  border-bottom-color: var(--glass-border);
+  box-shadow: var(--glass-highlight), 0 10px 32px rgb(35 48 76 / 12%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.app-toolbar h1 { color: var(--ink); }
+.eyebrow,
+.privacy-pill { color: var(--muted); }
+
+.brand-mark {
+  border-color: rgb(255 255 255 / 28%);
+  background: linear-gradient(145deg, #8588ff, #5559da 68%, #4145b8);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 26%), 0 10px 24px rgb(72 76 205 / 30%);
+}
+
+.toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
+
+.theme-switcher {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--glass-control);
+  border: 1px solid var(--glass-border);
+  border-radius: 11px;
+  box-shadow: var(--glass-highlight);
+}
+
+.theme-option {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  transition: color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.theme-option svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.theme-option:hover { color: var(--ink); background: var(--glass-control-hover); }
+.theme-option:active { transform: scale(0.94); }
+.theme-option--active {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 4px 12px rgb(69 73 199 / 28%);
+}
+
+.privacy-pill,
+.bind-button,
+.anchor-button {
+  color: var(--muted);
+  background: var(--glass-control);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-highlight);
+}
+
+.privacy-dot { background: var(--success); }
+.bind-button:hover,
+.anchor-button:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--glass-control-hover);
+  border-color: var(--glass-border);
+}
+
+.bind-button--active,
+.bind-button--active:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #7377f2, #565ad8);
+  border-color: rgb(255 255 255 / 20%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 24%), 0 8px 20px rgb(73 77 203 / 32%);
+}
+
+.anchor-button--active { color: var(--accent-dark); background: var(--accent-soft); }
+.clear-anchor-button { color: var(--muted); }
+.clear-anchor-button:hover { color: var(--ink); background: var(--glass-control-hover); }
+
+.workspace { gap: 0; }
+.workspace-divider::before { background: var(--line); }
+.workspace-divider span {
+  color: var(--muted);
+  background: var(--glass-strong);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-highlight), 0 4px 14px rgb(31 44 70 / 10%);
+}
+
+.document-panel {
+  background: var(--glass-panel);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+}
+
+.document-panel--active {
+  border-color: rgb(116 120 238 / 52%);
+  box-shadow: var(--glass-highlight), var(--shadow-active);
+}
+
+.panel-toolbar,
+.panel-chrome {
+  background: var(--glass-strong);
+  border-color: var(--line);
+}
+
+.panel-side-badge { color: var(--accent-dark); background: var(--accent-soft); }
+.page-counter,
+.compact-button,
+.search-bar input,
+.password-dialog input {
+  color: var(--ink);
+  background: var(--glass-control);
+  border-color: var(--line);
+}
+
+.page-counter input,
+.zoom-value,
+.tool-button,
+.text-tool-button,
+.compact-button { color: var(--ink); }
+
+.tool-button:hover:not(:disabled),
+.text-tool-button:hover,
+.tool-button--active,
+.compact-button:hover {
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  border-color: rgb(116 120 238 / 26%);
+}
+
+.empty-document {
+  border-color: var(--line);
+  background: radial-gradient(circle at 50% 26%, rgb(105 109 235 / 14%), transparent 36%), var(--glass-control);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%);
+}
+
+.document-panel:has(.empty-document):hover .empty-document {
+  border-color: rgb(116 120 238 / 46%);
+  background-color: var(--glass-control-hover);
+}
+
+.empty-document h2,
+.document-message strong,
+.password-dialog h2 { color: var(--ink); }
+
+.document-scroll {
+  background-color: var(--reader-background);
+  background-image: linear-gradient(45deg, var(--reader-pattern) 25%, transparent 25%), linear-gradient(-45deg, var(--reader-pattern) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--reader-pattern) 75%), linear-gradient(-45deg, transparent 75%, var(--reader-pattern) 75%);
+  scrollbar-color: var(--muted) transparent;
+}
+
+.diff-overlay,
+.password-overlay { background: var(--overlay); }
+
+.diff-dialog,
+.password-dialog {
+  color: var(--ink);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), 0 28px 90px rgb(0 0 0 / 30%);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+  backdrop-filter: blur(24px) saturate(145%);
+}
+
+.diff-page h3,
+.diff-columns p { color: var(--ink); }
+.diff-columns > div { background: var(--glass-control); border-color: var(--line); }
+.diff-removed { color: #ef8a9d; background: rgb(190 47 77 / 20%); }
+.diff-added { color: #62d5ae; background: rgb(31 157 117 / 19%); }
+
+.status-bar {
+  color: var(--muted);
+  background: var(--glass-toolbar);
+  border-top-color: var(--glass-border);
+  box-shadow: 0 -1px 0 rgb(255 255 255 / 6%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+}
+
+.status-hint { color: var(--muted); opacity: 0.82; }
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .app-toolbar,
+  .status-bar,
+  .document-panel,
+  .diff-dialog,
+  .password-dialog { background: var(--surface-soft); }
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -714,6 +981,7 @@ label:has(input:focus-visible),
   .brand-mark { width: 36px; height: 36px; border-radius: 11px; }
   .brand-mark svg { width: 23px; height: 23px; }
   .eyebrow, .privacy-pill, .status-hint, .anchor-button, .clear-anchor-button { display: none; }
+  .theme-switcher { order: -1; }
   .workspace { padding: 9px; }
   .panel-actions { flex-wrap: wrap; }
   .fit-controls, .fit-controls + .toolbar-separator { display: none; }
