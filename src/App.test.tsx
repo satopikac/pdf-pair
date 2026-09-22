@@ -15,6 +15,12 @@ describe("PDF Pair workspace", () => {
     render(<App />);
 
     expect(screen.getAllByRole("region", { name: /pdf 面板/i })).toHaveLength(2);
+    expect(screen.getByText("PDF Pair")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "最小化窗口" })).toBeTruthy();
+    expect(screen.queryByText("本地处理")).toBeNull();
+    expect(screen.queryByText("双文档对照工作台")).toBeNull();
+    expect(screen.queryByText("文件仅在此设备中打开，不会上传")).toBeNull();
+    expect(screen.queryByText("两侧独立滚动")).toBeNull();
   });
 
   it("lets the user bind and unbind scrolling", async () => {

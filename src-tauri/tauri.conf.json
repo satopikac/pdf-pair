@@ -18,6 +18,10 @@
         "height": 900,
         "minWidth": 760,
         "minHeight": 620,
+        "decorations": false,
+        "transparent": true,
+        "center": true,
+        "shadow": false,
         "resizable": true,
         "fullscreen": false
       }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { DocumentPane, type PaneSide } from "./components/DocumentPane";
+import { WindowTitleBar } from "./components/WindowTitleBar";
 import { mapScrollProgress } from "./domain/sync";
 import { pdfLoader, type PdfLoader } from "./pdf/pdfLoader";
 import type { PdfDocument } from "./pdf/pdfLoader";
@@ -308,36 +309,22 @@ export function App({
 
   return (
     <main className="app-shell" data-theme={resolvedTheme}>
-      <header className="app-toolbar">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" role="presentation">
-              <rect x="4" y="7" width="14" height="19" rx="3" />
-              <rect x="14" y="4" width="14" height="21" rx="3" />
-              <path d="M18 10h6M18 14h6M18 18h4" />
-            </svg>
-          </span>
-          <div>
-            <h1>PDF Pair</h1>
-            <p className="eyebrow">双文档对照工作台</p>
-          </div>
+      <WindowTitleBar>
+        <div className="theme-switcher" role="group" aria-label="界面主题">
+          <button type="button" className={themePreference === "system" ? "theme-option theme-option--active" : "theme-option"} aria-label="跟随系统主题" aria-pressed={themePreference === "system"} title="跟随系统" onClick={() => setThemePreference("system")}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="12" rx="2" /><path d="M9 20h6M12 16.5V20" /></svg>
+          </button>
+          <button type="button" className={themePreference === "light" ? "theme-option theme-option--active" : "theme-option"} aria-label="浅色主题" aria-pressed={themePreference === "light"} title="浅色主题" onClick={() => setThemePreference("light")}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" /><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" /></svg>
+          </button>
+          <button type="button" className={themePreference === "dark" ? "theme-option theme-option--active" : "theme-option"} aria-label="深色主题" aria-pressed={themePreference === "dark"} title="深色主题" onClick={() => setThemePreference("dark")}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.2A8.4 8.4 0 0 1 8.8 3.8 8.5 8.5 0 1 0 20.2 15.2Z" /></svg>
+          </button>
         </div>
+      </WindowTitleBar>
+
+      <header className="app-toolbar" aria-label="文档对照工具">
         <div className="toolbar-actions">
-          <div className="theme-switcher" role="group" aria-label="界面主题">
-            <button type="button" className={themePreference === "system" ? "theme-option theme-option--active" : "theme-option"} aria-label="跟随系统主题" aria-pressed={themePreference === "system"} title="跟随系统" onClick={() => setThemePreference("system")}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="12" rx="2" /><path d="M9 20h6M12 16.5V20" /></svg>
-            </button>
-            <button type="button" className={themePreference === "light" ? "theme-option theme-option--active" : "theme-option"} aria-label="浅色主题" aria-pressed={themePreference === "light"} title="浅色主题" onClick={() => setThemePreference("light")}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" /><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" /></svg>
-            </button>
-            <button type="button" className={themePreference === "dark" ? "theme-option theme-option--active" : "theme-option"} aria-label="深色主题" aria-pressed={themePreference === "dark"} title="深色主题" onClick={() => setThemePreference("dark")}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.2A8.4 8.4 0 0 1 8.8 3.8 8.5 8.5 0 1 0 20.2 15.2Z" /></svg>
-            </button>
-          </div>
-          <span className="privacy-pill">
-            <span className="privacy-dot" aria-hidden="true" />
-            本地处理
-          </span>
           <button
             type="button"
             className="anchor-button"
@@ -488,15 +475,14 @@ export function App({
         </div>
       ) : null}
 
-      <footer className="status-bar">
-        <span>
-          <span className={isScrollBound ? "status-indicator status-indicator--active" : "status-indicator"} aria-hidden="true" />
-          {isScrollBound
-            ? `滚动已绑定 · ${activeSide === "left" ? "左侧" : "右侧"}驱动`
-            : "两侧独立滚动"}
-        </span>
-        <span className="status-hint">文件仅在此设备中打开，不会上传</span>
-      </footer>
+      {isScrollBound ? (
+        <footer className="status-bar">
+          <span>
+            <span className="status-indicator status-indicator--active" aria-hidden="true" />
+            {`滚动已绑定 · ${activeSide === "left" ? "左侧" : "右侧"}驱动`}
+          </span>
+        </footer>
+      ) : null}
     </main>
   );
 }
