@@ -1,6 +1,6 @@
 [package]
 name = "pdf-pair"
-version = "0.1.1"
+version = "0.1.2"
 description = "Offline dual-pane PDF reader"
 authors = ["satopikac <pkumqy@foxmail.com>"]
 edition = "2021"
